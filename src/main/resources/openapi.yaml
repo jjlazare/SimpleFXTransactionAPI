@@ -1,0 +1,148 @@
+openapi: 3.0.0
+info:
+  title: WEX Purchase Transaction Service
+  version: 1.1.0
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+
+  /api/v1/purchases:
+    post:
+      tags:
+        - Purchases
+      summary: Store a purchase transaction
+      operationId: createPurchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseCreateRequest'
+      responses:
+        '201':
+          description: Purchase created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/purchases/{id}:
+    get:
+      tags:
+        - Purchases
+      summary: Retrieve a purchase converted to a target currency
+      operationId: getPurchaseConverted
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: currency
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Z]{3}$'
+      responses:
+        '200':
+          description: Converted purchase
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseConvertedResponse'
+        '400':
+          description: Validation or conversion error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Purchase not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+
+    PurchaseCreateRequest:
+      type: object
+      required:
+        - description
+        - transactionDate
+        - amountUsd
+      properties:
+        description:
+          type: string
+          maxLength: 50
+        transactionDate:
+          type: string
+          format: date
+        amountUsd:
+          type: number
+          minimum: 0.01
+          multipleOf: 0.01
+
+    PurchaseResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        transactionDate:
+          type: string
+          format: date
+        amountUsd:
+          type: number
+
+    PurchaseConvertedResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        transactionDate:
+          type: string
+          format: date
+        amountUsd:
+          type: number
+        targetCurrency:
+          type: string
+        exchangeRateUsed:
+          type: number
+        convertedAmount:
+          type: number
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          enum:
+            - VALIDATION_ERROR
+            - PURCHASE_NOT_FOUND
+            - NO_RATE_AVAILABLE
+            - TREASURY_API_ERROR
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true

@@ -1,0 +1,12 @@
+### Create purchase
+POST {{baseUrl}}/api/v1/purchases
+Content-Type: application/json
+
+{
+  "description": "Test chair",
+  "transactionDate": "2024-05-10",
+  "amountUsd": 129.99
+}
+
+### Convert purchase
+GET {{baseUrl}}/api/v1/purchases/{{id}}?currency=EUR
