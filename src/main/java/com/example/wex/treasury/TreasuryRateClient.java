@@ -75,6 +75,7 @@ public class TreasuryRateClient {
             }
 
             // Robust selection: find latest parsable date with valid rate
+            LocalDate minDate = purchaseDate.minusMonths(6);
             TreasuryModels.RateRow best = resp.data().stream()
                     .filter(r -> r.recordDate() != null && r.exchangeRate() != null && !r.exchangeRate().isBlank())
                     .map(r -> {
@@ -85,6 +86,9 @@ public class TreasuryRateClient {
                         }
                     })
                     .filter(Objects::nonNull)
+                    .filter(e -> !e.getKey().isAfter(purchaseDate)) // record_date <= purchaseDate
+                    .filter(e -> !e.getKey().isBefore(minDate))      // record_date >= purchaseDate - 6 months
+
                     .max(java.util.Map.Entry.comparingByKey())
                     .map(java.util.Map.Entry::getValue)
                     .orElse(null);

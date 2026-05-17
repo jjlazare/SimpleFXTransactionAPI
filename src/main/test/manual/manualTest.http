@@ -14,12 +14,12 @@ GET {{baseUrl}}/api/v1/purchases/{{id}}?currency=EUR
 
 
 ### Create Purchase
-POST http://localhost:8443/api/v1/purchases
+POST https://localhost:8443/api/v1/purchases
 Content-Type: application/json
 
 {
   "description": "Office Chair",
-  "transactionDate": "2024-03-15",
+  "transactionDate": "2026-03-15",
   "amountUsd": 150.75
 }
 
@@ -29,4 +29,4 @@ GET https://localhost:8443/api/v1/treasury/currency-descriptions
 
 
 ### Convert Purchase
-GET https://localhost:8443/api/v1/purchases/a39a9a53-f141-4d78-ae42-c80b0924d87c?country_currency_desc=Austria-Euro
+GET https://localhost:8443/api/v1/purchases/723838f4-d38b-4e33-88b8-f75c8ef8a7c8?country_currency_desc=Brazil-Real

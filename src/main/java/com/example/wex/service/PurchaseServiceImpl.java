@@ -36,6 +36,14 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchaseValidator.validate(request);
         var entity = mapper.toEntity(request);
         var saved = repository.save(entity);
+
+        log.info("Transaction created: purchaseId={} transactionDate={} amountUsd={} description={}",
+                saved.getId(),
+                saved.getTransactionDate(),
+                saved.getAmountUsd(),
+                saved.getDescription()
+        );
+
         return mapper.toResponse(saved);
     }
 
@@ -85,6 +93,17 @@ public class PurchaseServiceImpl implements PurchaseService {
 
         resp.setExchangeRateUsed(rate.doubleValue());
         resp.setConvertedAmount(converted.doubleValue());
+
+
+        log.info("Transaction Converted purchaseId={} transactionDate={} target={} rateUsed={} amountUsd={} convertedAmount={}",
+                resp.getId(),
+                resp.getTransactionDate(),
+                countryCurrencyDesc,
+                rate,
+                resp.getAmountUsd(),
+                resp.getConvertedAmount()
+        );
+
         return resp;
     }
 }

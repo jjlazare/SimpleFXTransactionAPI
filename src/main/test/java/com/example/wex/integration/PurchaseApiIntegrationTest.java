@@ -2,6 +2,7 @@ package com.example.wex.integration;
 
 import com.example.wex.model.PurchaseCreateRequest;
 import com.example.wex.model.PurchaseResponse;
+import com.example.wex.treasury.TreasuryRateClient;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,6 +10,15 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
+import com.github.tomakehurst.wiremock.WireMockServer;
+import org.junit.jupiter.api.*;
+import org.springframework.web.reactive.function.client.WebClient;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -137,7 +147,7 @@ class PurchaseApiIntegrationTest {
                         List.class
                 );
 
-        String descriptor = (String) currencies.getFirst();
+        String descriptor = (String) currencies.get(99); //arbitrary. random for prod
 
         ResponseEntity<String> response =
                 restTemplate.getForEntity(
@@ -273,6 +283,7 @@ class PurchaseApiIntegrationTest {
         assertTrue(response.getBody().contains("Purchase 2"));
         assertFalse(response.getBody().contains("Purchase 1"));
     }
+
     @Test
     void shouldHandleMultiplePurchasesQuickly() {
 
@@ -292,5 +303,212 @@ class PurchaseApiIntegrationTest {
 
             assertEquals(HttpStatus.CREATED, response.getStatusCode());
         }
+    }
+
+    private static WireMockServer wireMock;
+    private TreasuryRateClient client;
+
+    @BeforeAll
+    static void start() {
+        wireMock = new WireMockServer(8089);
+        wireMock.start();
+    }
+
+    @AfterAll
+    static void stop() {
+        wireMock.stop();
+    }
+
+    @BeforeEach
+    void setup() {
+        wireMock.resetAll();
+
+        WebClient webClient = WebClient.builder()
+                .baseUrl("http://localhost:8089")
+                .build();
+
+        client = new TreasuryRateClient(webClient);
+    }
+
+    /**
+     * A) PROVES: client requests the correct window (>= purchaseDate-6mo AND <= purchaseDate)
+     * and requests descending sort by record_date.
+     */
+    @Test
+    void shouldRequestRatesConstrainedToPurchaseDateAndSixMonthWindow_andSortedDesc() {
+        LocalDate purchaseDate = LocalDate.of(2024, 3, 15);
+        String desc = "Austria-Euro";
+        LocalDate minDate = purchaseDate.minusMonths(6);
+
+        wireMock.stubFor(get(urlPathEqualTo("/v1/accounting/od/rates_of_exchange"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                            { "data": [ { "record_date": "2024-03-01", "exchange_rate": "1.2" } ] }
+                        """)));
+
+        client.getRateWithinSixMonths(purchaseDate, desc);
+
+        wireMock.verify(getRequestedFor(urlPathEqualTo("/v1/accounting/od/rates_of_exchange"))
+                .withQueryParam("fields", equalTo("country_currency_desc,exchange_rate,record_date"))
+                .withQueryParam("sort", equalTo("-record_date"))
+                .withQueryParam("filter", equalTo(
+                        String.format(
+                                "record_date:gte:%s,record_date:lte:%s,country_currency_desc:eq:%s",
+                                minDate, purchaseDate, desc
+                        )
+                )));
+    }
+
+    /**
+     * B) PROVES: chooses the latest record_date among the returned rows
+     */
+    @Test
+    void shouldChooseLatestRateWithinWindow_whenMultipleReturned() {
+        wireMock.stubFor(get(urlPathMatching(".*rates_of_exchange.*"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                            {
+                              "data": [
+                                { "record_date": "2024-01-01", "exchange_rate": "1.1" },
+                                { "record_date": "2024-02-01", "exchange_rate": "1.2" },
+                                { "record_date": "2024-02-15", "exchange_rate": "1.25" }
+                              ]
+                            }
+                        """)));
+
+        BigDecimal rate = client.getRateWithinSixMonths(
+                LocalDate.of(2024, 3, 1),
+                "Austria-Euro"
+        );
+
+        assertEquals(new BigDecimal("1.25"), rate);
+    }
+
+    /**
+     * C) PROVES: ignores future-dated rates (record_date > purchaseDate) and picks latest <= purchaseDate.
+     */
+    @Test
+    void shouldIgnoreRatesAfterPurchaseDate_evenIfReturnedByApi() {
+        wireMock.stubFor(get(urlPathMatching(".*rates_of_exchange.*"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                            {
+                              "data": [
+                                { "record_date": "2024-03-20", "exchange_rate": "9.9" },
+                                { "record_date": "2024-03-10", "exchange_rate": "1.2" }
+                              ]
+                            }
+                        """)));
+
+        BigDecimal rate = client.getRateWithinSixMonths(
+                LocalDate.of(2024, 3, 15),
+                "Austria-Euro"
+        );
+
+        // Expect 1.2 (latest <= purchase date), NOT 9.9 (future).
+        assertEquals(new BigDecimal("1.2"), rate);
+    }
+
+    /**
+     * D) PROVES: ignores rates older than 6 months.
+     * purchaseDate 2024-03-01 => cutoff is 2023-09-01 (inclusive).
+     */
+    @Test
+    void shouldIgnoreRatesOlderThanSixMonths_evenIfReturnedByApi() {
+        wireMock.stubFor(get(urlPathMatching(".*rates_of_exchange.*"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                            {
+                              "data": [
+                                { "record_date": "2023-08-01", "exchange_rate": "9.9" },
+                                { "record_date": "2023-10-01", "exchange_rate": "1.1" }
+                              ]
+                            }
+                        """)));
+
+        BigDecimal rate = client.getRateWithinSixMonths(
+                LocalDate.of(2024, 3, 1),
+                "Austria-Euro"
+        );
+
+        // 2023-08-01 is too old; 2023-10-01 is within 6 months.
+        assertEquals(new BigDecimal("1.1"), rate);
+    }
+
+    /**
+     * E) PROVES: boundary condition: exactly 6 months old is allowed (inclusive).
+     */
+    @Test
+    void shouldAllowRateExactlyAtSixMonthBoundary() {
+        wireMock.stubFor(get(urlPathMatching(".*rates_of_exchange.*"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                            {
+                              "data": [
+                                { "record_date": "2023-09-01", "exchange_rate": "1.1" }
+                              ]
+                            }
+                        """)));
+
+        BigDecimal rate = client.getRateWithinSixMonths(
+                LocalDate.of(2024, 3, 1),
+                "Austria-Euro"
+        );
+
+        assertEquals(new BigDecimal("1.1"), rate);
+    }
+
+    /**
+     * F) PROVES: returns null when no qualifying rate exists in the allowed window.
+     */
+    @Test
+    void shouldReturnNullWhenNoQualifyingRateExists() {
+        wireMock.stubFor(get(urlPathMatching(".*rates_of_exchange.*"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                            {
+                              "data": [
+                                { "record_date": "2020-01-01", "exchange_rate": "1.1" }
+                              ]
+                            }
+                        """)));
+
+        BigDecimal rate = client.getRateWithinSixMonths(
+                LocalDate.of(2024, 3, 1),
+                "Austria-Euro"
+        );
+
+        assertNull(rate);
+    }
+
+    /**
+     * G) PROVES: robustness: skips unparsable dates and still selects latest valid.
+     */
+    @Test
+    void shouldSkipUnparsableDatesAndStillSelectLatestValid() {
+        wireMock.stubFor(get(urlPathMatching(".*rates_of_exchange.*"))
+                .willReturn(aResponse()
+                        .withHeader("Content-Type", "application/json")
+                        .withBody("""
+                            {
+                              "data": [
+                                { "record_date": "NOT_A_DATE", "exchange_rate": "9.9" },
+                                { "record_date": "2024-02-01", "exchange_rate": "1.2" }
+                              ]
+                            }
+                        """)));
+
+        BigDecimal rate = client.getRateWithinSixMonths(
+                LocalDate.of(2024, 3, 1),
+                "Austria-Euro"
+        );
+
+        assertEquals(new BigDecimal("1.2"), rate);
     }
 }

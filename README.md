@@ -1,91 +1,163 @@
-# Currency Conversion Service
+WEX Purchase Transaction Service Documentation
 
-A lightweight, production‑minded backend service for storing purchase transactions in USD and retrieving them converted into foreign currencies using authoritative exchange‑rate data from a public government API.
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Setup and Run](#setup-and-run)
+- [API Usage](#api-usage)
+  - [Create Purchase](#create-purchase)
+  - [Get Currency Descriptions](#get-currency-descriptions)
+  - [Convert Purchase](#convert-purchase)
+- [Testing](#testing)
+- [Error Handling](#error-handling)
+- [Design Decisions](#design-decisions)
+- [Future Improvements](#future-improvements)
+============================================
+OVERVIEW
+============================================
 
-This project demonstrates clean API design, layered architecture, robust validation, and real‑world integration with an external data provider.
+This service allows you to:
+- Create purchase transactions in USD
+- Convert purchases using U.S. Treasury exchange rates
+- Validate inputs and handle errors consistently
 
----
+Core flow:
+1. Create a purchase
+2. Retrieve a supported currency descriptor
+3. Convert using Treasury exchange rates (within 6-month window)
 
-## Features
 
-### Store Purchase Transactions
-- Description (max 50 characters)
-- Transaction date (validated)
-- USD amount (positive, rounded to cents)
-- Automatically assigned unique identifier
-- Persisted in an embedded database
+============================================
+TABLE OF CONTENTS
+============================================
+1. Overview
+2. Architecture
+3. Setup and Run
+4. API Usage
+5. Testing
+6. Error Handling
+7. Design Decisions
 
-### Retrieve Converted Transactions
-- Convert stored USD purchases into a target currency
-- Uses authoritative exchange‑rate data
-- Selects the latest rate **on or before** the purchase date
-- Enforces a **6‑month look‑back window**
-- Returns:
-  - ID  
-  - Description  
-  - Transaction date  
-  - Original USD amount  
-  - Exchange rate used  
-  - Converted amount (rounded to 2 decimals)
 
-### Dynamic Currency Support
-- No hard‑coded currency mappings
-- Supported currencies derived from the external dataset
-- Validates currency codes against dynamically loaded data
+============================================
+ARCHITECTURE
+============================================
 
-### Robust Validation & Error Handling
-- Clear, consistent error responses
-- Validation errors (400)
-- Missing purchases (404)
-- Missing exchange rates (400)
-- External API failures (502)
+Layers:
+- Controller: Handles HTTP requests
+- Service: Business logic and orchestration
+- Repository: JPA persistence (H2 DB)
+- Treasury Client: External API integration
+- Cache: Stores currency descriptors in memory
 
----
+Notes:
+- Currency descriptors must exactly match Treasury values
+- No internal mapping is applied
 
-## Architecture
 
-The service follows a clean, maintainable layered architecture:
-API Layer (OpenAPI)
-↓
-Service Layer (business logic)
-↓
-Persistence Layer (JPA + embedded DB)
-↓
-External Integration (exchange‑rate API)
+============================================
+SETUP AND RUN
+============================================
 
-Key characteristics:
-- Separation of concerns
-- Testable components
-- No hard‑coded external data
-- Production‑ready patterns
+Prerequisites:
+- Java 21
+- Gradle
 
----
+Run locally:
+    ./gradlew bootRun
 
-## Tech Stack
+Application URL:
+    https://localhost:8443
 
-- Java 21  
-- Spring Boot  
-- OpenAPI 3.1  
-- H2 embedded database  
-- Spring Data JPA  
-- WebClient for external API calls  
-- JUnit for automated tests  
+H2 Console:
+    http://localhost:8443/h2-console
 
----
 
-## Running the Application
+============================================
+API USAGE
+============================================
 
-Clone the repository and run:
+1. Create Purchase
+POST /api/v1/purchases
 
-./gradlew bootRun
-The service starts with:
+Example body:
+{
+  "description": "Office Chair",
+  "transactionDate": "2026-03-15",
+  "amountUsd": "150.75"
+}
 
-Embedded database (no setup required)
+2. Get Currency Descriptions
+GET /api/v1/treasury/currency-descriptions
 
-Auto‑generated API endpoints
+3. Convert Purchase
+GET /api/v1/purchases/{id}?country_currency_desc=Austria-Euro
 
-Live integration with the external exchange‑rate API
 
-License
-This project is provided for educational and demonstration purposes.
+============================================
+TESTING
+============================================
 
+Test Types:
+
+1. Unit Tests
+- Validate business logic
+- Validate error handling
+
+2. Integration Tests
+- End-to-end flow testing
+- Uses in-memory DB
+- Uses WireMock to simulate Treasury API
+
+Test Scenarios Covered:
+- Successful conversion
+- Unsupported currency
+- Missing purchase (404)
+- No rate available
+- Decimal rounding behavior
+
+Run tests:
+    ./gradlew test
+
+Manual Testing Examples:
+
+POST https://localhost:8443/api/v1/purchases
+GET  https://localhost:8443/api/v1/treasury/currency-descriptions
+GET  https://localhost:8443/api/v1/purchases/{id}?country_currency_desc=Brazil-Reals
+
+
+============================================
+ERROR HANDLING
+============================================
+
+Status Codes:
+- 400: Validation error
+- 404: Purchase not found
+- 503: Treasury data unavailable
+- 502: Treasury API failure
+
+
+============================================
+DESIGN DECISIONS
+============================================
+
+Cache Usage:
+- Reduces external API calls
+- Improves performance
+
+Strict Descriptor Validation:
+- Prevents mismatches
+- Ensures consistency with Treasury API
+
+6-Month Exchange Rule:
+- Uses latest rate within 6 months of purchase
+- Ensures realistic conversion accuracy
+
+
+============================================
+FUTURE IMPROVEMENTS
+============================================
+
+- Add retry/backoff for Treasury API
+- Persist conversion history
+- Replace H2 with production database
+- Add authentication and security
