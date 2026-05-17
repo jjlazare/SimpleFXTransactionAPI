@@ -11,6 +11,7 @@ WEX Purchase Transaction Service Documentation
 - [Error Handling](#error-handling)
 - [Design Decisions](#design-decisions)
 - [Future Improvements](#future-improvements)
+- 
 ============================================
 OVERVIEW
 ============================================
