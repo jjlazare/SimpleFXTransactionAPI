@@ -81,9 +81,9 @@ Run the generated JAR:
     java -jar build/libs/wex-purchase-service.jar
 
 
---------------------------------------------
+============================================
 Development Mode (Optional)
---------------------------------------------
+============================================
 
 For development and faster iteration:
 
