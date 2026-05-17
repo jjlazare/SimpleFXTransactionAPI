@@ -1,8 +1,8 @@
 WEX Purchase Transaction Service Documentation
 
+- [Setup and Run](#setup-and-run)
 - [Overview](#overview)
 - [Architecture](#architecture)
-- [Setup and Run](#setup-and-run)
 - [API Usage](#api-usage)
   - [Create Purchase](#create-purchase)
   - [Get Currency Descriptions](#get-currency-descriptions)
@@ -26,19 +26,6 @@ Core flow:
 2. Retrieve a supported currency descriptor
 3. Convert using Treasury exchange rates (within 6-month window)
 
-
-============================================
-TABLE OF CONTENTS
-============================================
-1. Overview
-2. Architecture
-3. Setup and Run
-4. API Usage
-5. Testing
-6. Error Handling
-7. Design Decisions
-
-
 ============================================
 ARCHITECTURE
 ============================================
@@ -54,23 +41,38 @@ Notes:
 - Currency descriptors must exactly match Treasury values
 - No internal mapping is applied
 
-
 ============================================
 SETUP AND RUN
 ============================================
 
-Prerequisites:
-- Java 21
-- Gradle
+Quick Start (Run Without Building – Recommended)
+A pre-built fat JAR is provided for quick evaluation. This includes all dependencies and can be run directly.
+From the root of the project directory structure run:
 
-Run locally:
-    ./gradlew bootRun
+java -jar .\FatJar\wex-purchase-service.jar
 
-Application URL:
-    https://localhost:8443
+The application will start on:
+https://localhost:8443
 
-H2 Console:
-    http://localhost:8443/h2-console
+Note: The fat JAR is self-contained and does not require Gradle or additional setup.
+
+Build and Run (Gradle)
+If you prefer to build locally:
+Build the application:
+./gradlew clean build
+
+This will generate the fat JAR at:
+build/libs/wex-purchase-service.jar
+
+Run the JAR:
+java -jar build/libs/wex-purchase-service.jar
+
+
+Development Mode (Optional)
+For development and faster iteration:
+./gradlew bootRun
+
+Gradle will automatically compile the project and start the application.
 
 
 ============================================
@@ -153,12 +155,3 @@ Strict Descriptor Validation:
 - Uses latest rate within 6 months of purchase
 - Ensures realistic conversion accuracy
 
-
-============================================
-FUTURE IMPROVEMENTS
-============================================
-
-- Add retry/backoff for Treasury API
-- Persist conversion history
-- Replace H2 with production database
-- Add authentication and security
