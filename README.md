@@ -11,7 +11,7 @@ WEX Purchase Transaction Service Documentation
 - [Error Handling](#error-handling)
 - [Design Decisions](#design-decisions)
 - [Future Improvements](#future-improvements)
-- 
+  
 ============================================
 OVERVIEW
 ============================================
@@ -46,34 +46,50 @@ SETUP AND RUN
 ============================================
 
 Quick Start (Run Without Building – Recommended)
-A pre-built fat JAR is provided for quick evaluation. This includes all dependencies and can be run directly.
-From the root of the project directory structure run:
 
-java -jar .\FatJar\wex-purchase-service.jar
+A pre-built fat JAR is provided for quick evaluation. This includes all
+dependencies and can be run directly.
+
+From the root of the project directory, run:
+
+    java -jar .\FatJar\wex-purchase-service.jar
 
 The application will start on:
-https://localhost:8443
 
-Note: The fat JAR is self-contained and does not require Gradle or additional setup.
+    https://localhost:8443
 
+Note:
+The fat JAR is self-contained and does not require Gradle or any additional setup.
+
+
+============================================
 Build and Run (Gradle)
-If you prefer to build locally:
-Build the application:
-./gradlew clean build
+============================================
+
+If you prefer to build the application locally:
+
+Build the project:
+
+    ./gradlew clean build
 
 This will generate the fat JAR at:
-build/libs/wex-purchase-service.jar
 
-Run the JAR:
-java -jar build/libs/wex-purchase-service.jar
+    build/libs/wex-purchase-service.jar
+
+Run the generated JAR:
+
+    java -jar build/libs/wex-purchase-service.jar
 
 
+--------------------------------------------
 Development Mode (Optional)
+--------------------------------------------
+
 For development and faster iteration:
-./gradlew bootRun
+
+    ./gradlew bootRun
 
 Gradle will automatically compile the project and start the application.
-
 
 ============================================
 API USAGE
