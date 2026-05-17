@@ -1,6 +1,5 @@
 package com.example.wex.service;
 
-import com.example.wex.dto.PurchaseCreateDto;
 import com.example.wex.model.PurchaseCreateRequest;
 import com.example.wex.model.PurchaseConvertedResponse;
 import com.example.wex.model.PurchaseResponse;

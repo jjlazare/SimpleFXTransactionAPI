@@ -1,5 +1,8 @@
 package com.example.wex.exception;
 
+import lombok.Getter;
+
+@Getter
 public class ValidationException extends RuntimeException {
 
     private final String code;
@@ -7,9 +10,5 @@ public class ValidationException extends RuntimeException {
     public ValidationException(String code, String message) {
         super(message);
         this.code = code;
-    }
-
-    public String getCode() {
-        return code;
     }
 }

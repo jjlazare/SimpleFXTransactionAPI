@@ -2,12 +2,10 @@ openapi: 3.0.0
 info:
   title: WEX Purchase Transaction Service
   version: 1.1.0
-
 servers:
   - url: http://localhost:8080
 
 paths:
-
   /api/v1/purchases:
     post:
       tags:
@@ -38,7 +36,7 @@ paths:
     get:
       tags:
         - Purchases
-      summary: Retrieve a purchase converted to a target currency
+      summary: Retrieve a purchase converted using Treasury rates for a specific country-currency descriptor
       operationId: getPurchaseConverted
       parameters:
         - name: id
@@ -47,12 +45,16 @@ paths:
           schema:
             type: string
             format: uuid
-        - name: currency
+
+        # No mapping: caller passes Treasury "country_currency_desc" exactly as downloaded at startup.
+        - name: country_currency_desc
           in: query
           required: true
           schema:
             type: string
-            pattern: '^[A-Z]{3}$'
+            minLength: 1
+            maxLength: 200
+
       responses:
         '200':
           description: Converted purchase
@@ -72,16 +74,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: Treasury reference data unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
-
     PurchaseCreateRequest:
       type: object
-      required:
-        - description
-        - transactionDate
-        - amountUsd
+      required: [description, transactionDate, amountUsd]
       properties:
         description:
           type: string
@@ -90,12 +94,13 @@ components:
           type: string
           format: date
         amountUsd:
-          type: number
-          minimum: 0.01
-          multipleOf: 0.01
+          type: string
+          example: "100.10"
+
 
     PurchaseResponse:
       type: object
+      required: [id, description, transactionDate, amountUsd]
       properties:
         id:
           type: string
@@ -106,10 +111,11 @@ components:
           type: string
           format: date
         amountUsd:
-          type: number
+          type: string
 
     PurchaseConvertedResponse:
       type: object
+      required: [id, description, transactionDate, amountUsd, targetCurrency, exchangeRateUsed, convertedAmount]
       properties:
         id:
           type: string
@@ -120,29 +126,27 @@ components:
           type: string
           format: date
         amountUsd:
-          type: number
+          type: string
+
+        # Store the descriptor here (no mapping).
         targetCurrency:
           type: string
+
         exchangeRateUsed:
           type: number
+          format: double
+
         convertedAmount:
           type: number
+          format: double
 
     ErrorResponse:
       type: object
-      required:
-        - error
-        - message
+      required: [error, message]
       properties:
         error:
           type: string
-          enum:
-            - VALIDATION_ERROR
-            - PURCHASE_NOT_FOUND
-            - NO_RATE_AVAILABLE
-            - TREASURY_API_ERROR
+          description: Machine-readable error category
         message:
           type: string
-        details:
-          type: object
-          nullable: true
+          description: Human-readable message

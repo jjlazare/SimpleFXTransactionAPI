@@ -1,6 +1,5 @@
 package com.example.wex.api;
 
-import com.example.wex.dto.PurchaseCreateDto;
 import com.example.wex.model.*;
 import com.example.wex.service.PurchaseService;
 import lombok.RequiredArgsConstructor;
