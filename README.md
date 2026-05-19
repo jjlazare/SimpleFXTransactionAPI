@@ -38,14 +38,6 @@ docker compose up --build
 
 ---
 
-### 🌐 Application Access
-
-The API runs internally on port **8484**, and is exposed via Docker on:
-
-👉 **https://localhost:8080**
-
----
-
 ### 🛑 Stop
 
 ```bash
