@@ -9,24 +9,9 @@ Content-Type: application/json
   "amountUsd": 129.99
 }
 
-### Convert purchase
-GET {{baseUrl}}/api/v1/purchases/{{id}}?currency=EUR
-
-
-### Create Purchase
-POST https://localhost:8443/api/v1/purchases
-Content-Type: application/json
-
-{
-  "description": "Office Chair",
-  "transactionDate": "2026-03-15",
-  "amountUsd": 150.75
-}
-
-
 ### Get Treasury Currency Descriptions
-GET https://localhost:8443/api/v1/treasury/currency-descriptions
+GET https://localhost:8080/api/v1/treasury/currency-descriptions
 
 
 ### Convert Purchase
-GET https://localhost:8443/api/v1/purchases/723838f4-d38b-4e33-88b8-f75c8ef8a7c8?country_currency_desc=Brazil-Real
+GET https://localhost:8080/api/v1/purchases/58df4cf0-68b4-4993-8a98-92c98c2dc093?country_currency_desc=Brazil-Real

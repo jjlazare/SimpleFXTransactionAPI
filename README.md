@@ -1,173 +1,250 @@
-WEX Purchase Transaction Service Documentation
+# 🧾 WEX Purchase Transaction Service
 
-- [Setup and Run](#setup-and-run)
+![Java](https://img.shields.io/badge/Java-21-blue)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-brightgreen)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Gradle](https://img.shields.io/badge/Build-Gradle-success)
+![License](https://img.shields.io/badge/License-MIT-lightgrey)
+
+---
+
+## 📑 Table of Contents
+
+- [Setup and Run (Docker - Recommended)](#setup-and-run-docker---recommended)
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [API Usage](#api-usage)
-  - [Create Purchase](#create-purchase)
-  - [Get Currency Descriptions](#get-currency-descriptions)
-  - [Convert Purchase](#convert-purchase)
-- [Testing](#testing)
+- [API Documentation (Swagger / OpenAPI)](#api-documentation-swagger--openapi)
+- [Testing Strategy](#testing-strategy)
 - [Error Handling](#error-handling)
 - [Design Decisions](#design-decisions)
 - [Future Improvements](#future-improvements)
-  
-============================================
-OVERVIEW
-============================================
+- [Summary](#summary)
 
-This service allows you to:
-- Create purchase transactions in USD
-- Convert purchases using U.S. Treasury exchange rates
-- Validate inputs and handle errors consistently
+---
 
-Core flow:
-1. Create a purchase
-2. Retrieve a supported currency descriptor
-3. Convert using Treasury exchange rates (within 6-month window)
+## 🚀 Setup and Run (Docker - Recommended)
 
-============================================
-ARCHITECTURE
-============================================
+```bash
+docker compose up --build
+```
 
-Layers:
-- Controller: Handles HTTP requests
-- Service: Business logic and orchestration
-- Repository: JPA persistence (H2 DB)
-- Treasury Client: External API integration
-- Cache: Stores currency descriptors in memory
+### ✅ What this does
+- Builds the application container  
+- Starts PostgreSQL  
+- Launches the API  
+- Sets up networking automatically  
 
-Notes:
-- Currency descriptors must exactly match Treasury values
-- No internal mapping is applied
+---
 
-============================================
-SETUP AND RUN
-============================================
+### 🛑 Stop
 
-Quick Start (Run Without Building – Recommended)
+```bash
+docker compose down
+```
 
-A pre-built fat JAR is provided for quick evaluation. This includes all
-dependencies and can be run directly.
+---
 
-From the root of the project directory, run:
+### 📝 Notes
+- No local database installation required  
+- PostgreSQL runs entirely in Docker  
+- Data persists via Docker volumes  
 
-    java -jar .\FatJar\wex-purchase-service.jar
+---
 
-The application will start on:
+## 📘 Overview
 
-    https://localhost:8443
+Backend API for managing purchase transactions and performing currency conversion using U.S. Treasury exchange rates.
 
-Note:
-The fat JAR is self-contained and does not require Gradle or any additional setup.
+### 🔑 Capabilities
+- Persist transactions in USD  
+- Retrieve supported currency descriptors  
+- Convert using historical rates  
+- Strict validation and error handling  
 
+---
 
-============================================
-Build and Run (Gradle)
-============================================
+## 🏗️ Architecture
 
-If you prefer to build the application locally:
+### 🧱 Layers
 
-Build the project:
+| Layer            | Responsibility |
+|-----------------|--------------|
+| Controller      | HTTP handling |
+| Service         | Business logic |
+| Repository      | Persistence |
+| Treasury Client | External API |
+| Cache           | Currency descriptor caching |
 
-    ./gradlew clean build
+---
 
-This will generate the fat JAR at:
+### 📦 Deployment
 
-    build/libs/wex-purchase-service.jar
+```
+[ Docker ]
+   ├── App (Spring Boot - Port 8080)
+   └── DB (PostgreSQL)
+```
 
-Run the generated JAR:
+- Docker networking connects services  
+- Database hostname: `postgres`  
+- External access via port **8080 → 8484 mapping**  
 
-    java -jar build/libs/wex-purchase-service.jar
+---
 
+## 🔌 API Usage
 
-============================================
-Development Mode (Optional)
-============================================
+### ➕ Create Purchase
+**POST** `/api/v1/purchases`
 
-For development and faster iteration:
-
-    ./gradlew bootRun
-
-Gradle will automatically compile the project and start the application.
-
-============================================
-API USAGE
-============================================
-
-1. Create Purchase
-POST /api/v1/purchases
-
-Example body:
+```json
 {
   "description": "Office Chair",
   "transactionDate": "2026-03-15",
   "amountUsd": "150.75"
 }
+```
 
-2. Get Currency Descriptions
-GET /api/v1/treasury/currency-descriptions
+---
 
-3. Convert Purchase
-GET /api/v1/purchases/{id}?country_currency_desc=Austria-Euro
+### 🌍 Currency Descriptions
+**GET** `/api/v1/treasury/currency-descriptions`
 
+---
 
-============================================
-TESTING
-============================================
+### 💱 Convert Purchase  
+**GET**  
+`/api/v1/purchases/{id}?country_currency_desc=Austria-Euro`
 
-Test Types:
+---
 
-1. Unit Tests
-- Validate business logic
-- Validate error handling
+## 📄 API Documentation (Swagger / OpenAPI)
 
-2. Integration Tests
-- End-to-end flow testing
-- Uses in-memory DB
-- Uses WireMock to simulate Treasury API
+- Swagger UI: https://localhost:8080/swagger-ui/index.html  
+- OpenAPI Spec: https://localhost:8080/v3/api-docs  
 
-Test Scenarios Covered:
-- Successful conversion
-- Unsupported currency
-- Missing purchase (404)
-- No rate available
-- Decimal rounding behavior
+---
 
-Run tests:
-    ./gradlew test
+## 🧪 Testing
 
-Manual Testing Examples:
+```bash
+./gradlew test
+```
 
-POST https://localhost:8443/api/v1/purchases
-GET  https://localhost:8443/api/v1/treasury/currency-descriptions
-GET  https://localhost:8443/api/v1/purchases/{id}?country_currency_desc=Brazil-Reals
+- Unit tests  
+- Integration tests  
+- WireMock for Treasury API  
 
+---
 
-============================================
-ERROR HANDLING
-============================================
+## ⚠️ Error Handling
 
-Status Codes:
-- 400: Validation error
-- 404: Purchase not found
-- 503: Treasury data unavailable
-- 502: Treasury API failure
+| Code | Description |
+|------|------------|
+| 400  | Validation error |
+| 404  | Not found |
+| 502  | External API failure |
+| 503  | Treasury unavailable |
 
+---
 
-============================================
-DESIGN DECISIONS
-============================================
+## 🧠 Design Decisions
 
-Cache Usage:
-- Reduces external API calls
-- Improves performance
+### 💾 Database
+- PostgreSQL across environments  
 
-Strict Descriptor Validation:
-- Prevents mismatches
-- Ensures consistency with Treasury API
+### 🐳 Docker First
+- Fully containerized  
 
-6-Month Exchange Rule:
-- Uses latest rate within 6 months of purchase
-- Ensures realistic conversion accuracy
+### 💽 Persistence
+- Docker volumes  
 
+### 🔄 Schema
+- Hibernate auto-update  
+
+---
+
+### 🔁 Idempotency and Duplicate Transaction Handling
+
+Each `POST /purchases` request is treated as a request to create a **new transaction**.
+
+The requirements do not define deduplication rules, so:
+
+- Every request generates a unique identifier  
+- All transactions are stored independently  
+
+#### Why deduplication is not inferred
+
+- Identical transactions may be valid  
+- Timestamps are not reliable indicators  
+- Payload data does not convey request intent  
+
+#### Production-ready approach (not implemented)
+
+- Idempotency keys (client-provided)  
+- Client-generated transaction IDs with uniqueness constraints  
+
+These require API contract changes and were out of scope.
+
+---
+
+### ⚡ Caching of Currency Descriptions
+
+The service maintains an **in-memory cache** of Treasury currency descriptors.
+
+#### Benefits
+
+**Performance**
+- Eliminates repeated API calls  
+- Enables fast validation  
+
+**Availability**
+- Reduces dependency on Treasury uptime  
+- Continues operating with cached data  
+
+**Resilience**
+- Cache refresh can fail without breaking the service  
+
+**Testability**
+- Tests can dynamically fetch valid descriptors  
+
+#### Scope
+
+- Only descriptors are cached  
+- Exchange rates are fetched at runtime for accuracy  
+
+---
+
+### 🔒 Data Integrity
+- Strict currency descriptor matching  
+
+### 📉 Exchange Rules
+- 6‑month rate window  
+
+---
+
+## 🚧 Future Improvements
+
+- Flyway / Liquibase migrations  
+- Authentication & authorization  
+- Metrics and logging  
+- Pagination & filtering  
+
+---
+
+## ✅ Summary
+
+- Containerized backend  
+- PostgreSQL persistence  
+- External API integration  
+- Clean layered design  
+- Reproducible environment  
+
+---
+
+## ▶️ Run
+
+```bash
+docker compose up --build
+```
