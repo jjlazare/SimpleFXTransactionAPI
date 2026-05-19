@@ -40,9 +40,9 @@ docker compose up --build
 
 ### 🌐 Application Access
 
-The API runs internally on port **8080**, and is exposed via Docker on:
+The API runs internally on port **8484**, and is exposed via Docker on:
 
-👉 **https://localhost:8484**
+👉 **https://localhost:8080**
 
 ---
 
@@ -97,7 +97,7 @@ Backend API for managing purchase transactions and performing currency conversio
 
 - Docker networking connects services  
 - Database hostname: `postgres`  
-- External access via port **8484 → 8080 mapping**  
+- External access via port **8080 → 8484 mapping**  
 
 ---
 
@@ -129,8 +129,8 @@ Backend API for managing purchase transactions and performing currency conversio
 
 ## 📄 API Documentation (Swagger / OpenAPI)
 
-- Swagger UI: https://localhost:8484/swagger-ui/index.html  
-- OpenAPI Spec: https://localhost:8484/v3/api-docs  
+- Swagger UI: https://localhost:8080/swagger-ui/index.html  
+- OpenAPI Spec: https://localhost:8080/v3/api-docs  
 
 ---
 
